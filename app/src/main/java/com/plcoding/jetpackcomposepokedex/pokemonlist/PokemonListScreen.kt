@@ -24,7 +24,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush.Companion.verticalGradient
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -32,17 +31,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import coil.ImageLoader
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.ImagePainter
 import coil.compose.LocalImageLoader
 import coil.compose.rememberImagePainter
-import coil.request.CachePolicy
-import com.plcoding.jetpackcomposepokedex.util.GetColorDominantTransformation
 import com.plcoding.jetpackcomposepokedex.R
 import com.plcoding.jetpackcomposepokedex.data.models.PokedexListEntry
 import com.plcoding.jetpackcomposepokedex.ui.theme.RobotoCondensed
-import com.plcoding.jetpackcomposepokedex.ui.theme.lightGrey
+import com.plcoding.jetpackcomposepokedex.util.GetColorDominantTransformation
 
 @ExperimentalFoundationApi
 @ExperimentalCoilApi
@@ -71,7 +67,6 @@ fun PokemonListScreen(
             ) {
 
             }
-            Spacer(modifier = Modifier.height(16.dp))
             PokemonList(navController = navController)
         }
     }
@@ -131,35 +126,37 @@ fun PokemonList(
     val loadError by remember { viewModel.loadError }
     val isLoading by remember { viewModel.isLoading }
 
-    /*  LazyColumn(contentPadding = PaddingValues(16.dp)) {
-          val itemCount = if (pokemonList.size % 2 == 0) {
-              pokemonList.size / 2
-          } else {
-              pokemonList.size / 2 + 1
-          }
-          items(itemCount) {
-              if (it >= itemCount - 1 && !endReached) {
-                  viewModel.loadPokemonPaginated()
-              }
-              PokedexRow(rowIndex = it, entries = pokemonList, navController = navController)
-          }
-      }*/
-    LazyVerticalGrid(cells = GridCells.Fixed(2)) {
+/*    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        val itemCount = if (pokemonList.size % 2 == 0) {
+            pokemonList.size / 2
+        } else {
+            pokemonList.size / 2 + 1
+        }
+        items(itemCount) {
+            if (it >= itemCount - 1 && !endReached && !isLoading) {
+                viewModel.loadPokemonPaginated()
+            }
+            PokedexRow(rowIndex = it, entries = pokemonList, navController = navController)
+        }
+    }*/
+    LazyVerticalGrid(
+        cells = GridCells.Fixed(2),
+        contentPadding = PaddingValues(16.dp)
+    ) {
         items(pokemonList.size) { index ->
-            if (index >= pokemonList.size - 1 && !endReached) {
+            if (index >= pokemonList.size - 1 && !endReached && !isLoading) {
                 viewModel.loadPokemonPaginated()
             }
             PokedexEntry(
                 entry = pokemonList[index],
-                navController = navController,
-                modifier = Modifier
-                    .padding(5.dp)
+                navController = navController
             )
         }
     }
 
-    Box(
-        contentAlignment = Center,
+    Column(
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = CenterHorizontally,
         modifier = Modifier
             .fillMaxSize()
     ) {
@@ -208,10 +205,6 @@ fun PokedexEntry(
             val painter = rememberImagePainter(
                 data = entry.imageUrl,
                 imageLoader = LocalImageLoader.current,
-                /*  imageLoader = ImageLoader.Builder(context = LocalContext.current)
-                       .memoryCachePolicy(CachePolicy.DISABLED)
-                       .diskCachePolicy(CachePolicy.DISABLED)
-                       .build(),*/
                 builder = {
                     crossfade(true)
                     transformations(
@@ -243,6 +236,7 @@ fun PokedexEntry(
                 fontFamily = RobotoCondensed,
                 fontSize = 20.sp,
                 textAlign = TextAlign.Center,
+                maxLines = 1,
                 modifier = Modifier.fillMaxWidth()
             )
         }

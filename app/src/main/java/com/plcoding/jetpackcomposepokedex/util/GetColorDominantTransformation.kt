@@ -19,11 +19,4 @@ class GetColorDominantTransformation(private val onFinish: (Color) -> Unit) : Tr
         }
         return input
     }
-
-    override fun equals(other: Any?) = other is GetColorDominantTransformation
-
-    override fun hashCode() = javaClass.hashCode()
-
-    override fun toString() = "GetColorDominantTransformation()"
-
 }

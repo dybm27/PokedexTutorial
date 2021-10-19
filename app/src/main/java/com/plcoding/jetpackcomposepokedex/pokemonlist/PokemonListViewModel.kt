@@ -41,25 +41,27 @@ class PokemonListViewModel @Inject constructor(
                 val result = repository.getPokemonList(PAGE_SIZE, curPage * PAGE_SIZE)
             ) {
                 is Resource.Success -> {
-                    endReached.value = curPage * PAGE_SIZE >= result.data!!.count
-                    val pokedexEntries = result.data.results.mapIndexed { _, entry ->
-                        val number = if (entry.url.endsWith("/")) {
-                            entry.url.dropLast(1).takeLastWhile { it.isDigit() }
-                        } else {
-                            entry.url.takeLastWhile { it.isDigit() }
+                    result.data?.let { data ->
+                        endReached.value = (curPage * PAGE_SIZE) + PAGE_SIZE >= data.count
+                        val pokedexEntries = data.results.mapIndexed { _, entry ->
+                            val number = if (entry.url.endsWith("/")) {
+                                entry.url.dropLast(1).takeLastWhile { it.isDigit() }
+                            } else {
+                                entry.url.takeLastWhile { it.isDigit() }
+                            }
+                            val url =
+                                "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${number}.png"
+                            PokedexListEntry(entry.name.replaceFirstChar {
+                                if (it.isLowerCase()) it.titlecase(
+                                    Locale.ROOT
+                                ) else it.toString()
+                            }, url, number.toInt())
                         }
-                        val url =
-                            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${number}.png"
-                        PokedexListEntry(entry.name.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(
-                                Locale.ROOT
-                            ) else it.toString()
-                        }, url, number.toInt())
+                        curPage++
+                        loadError.value = ""
+                        isLoading.value = false
+                        pokemonList.value += pokedexEntries
                     }
-                    curPage++
-                    loadError.value = ""
-                    isLoading.value = false
-                    pokemonList.value += pokedexEntries
                 }
                 is Resource.Error -> {
                     loadError.value = result.message!!
