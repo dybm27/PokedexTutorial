@@ -1,19 +1,19 @@
 package com.plcoding.jetpackcomposepokedex.pokemonlist
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.GridCells
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush.Companion.verticalGradient
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -31,16 +32,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.ImageLoader
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.ImagePainter
 import coil.compose.LocalImageLoader
 import coil.compose.rememberImagePainter
-import com.plcoding.jetpackcomposepokedex.GetColorDominantTransformation
-import com.plcoding.jetpackcomposepokedex.ColorSaveable
+import coil.request.CachePolicy
+import com.plcoding.jetpackcomposepokedex.util.GetColorDominantTransformation
 import com.plcoding.jetpackcomposepokedex.R
 import com.plcoding.jetpackcomposepokedex.data.models.PokedexListEntry
 import com.plcoding.jetpackcomposepokedex.ui.theme.RobotoCondensed
+import com.plcoding.jetpackcomposepokedex.ui.theme.lightGrey
 
+@ExperimentalFoundationApi
 @ExperimentalCoilApi
 @Composable
 fun PokemonListScreen(
@@ -115,6 +119,7 @@ fun SearchBar(
     }
 }
 
+@ExperimentalFoundationApi
 @ExperimentalCoilApi
 @Composable
 fun PokemonList(
@@ -125,18 +130,47 @@ fun PokemonList(
     val endReached by remember { viewModel.endReached }
     val loadError by remember { viewModel.loadError }
     val isLoading by remember { viewModel.isLoading }
- 
-    LazyColumn(contentPadding = PaddingValues(16.dp)) {
-        val itemCount = if (pokemonList.size % 2 == 0) {
-            pokemonList.size / 2
-        } else {
-            pokemonList.size / 2 + 1
-        }
-        items(itemCount) {
-            if (it >= itemCount - 1 && !endReached) {
+
+    /*  LazyColumn(contentPadding = PaddingValues(16.dp)) {
+          val itemCount = if (pokemonList.size % 2 == 0) {
+              pokemonList.size / 2
+          } else {
+              pokemonList.size / 2 + 1
+          }
+          items(itemCount) {
+              if (it >= itemCount - 1 && !endReached) {
+                  viewModel.loadPokemonPaginated()
+              }
+              PokedexRow(rowIndex = it, entries = pokemonList, navController = navController)
+          }
+      }*/
+    LazyVerticalGrid(cells = GridCells.Fixed(2)) {
+        items(pokemonList.size) { index ->
+            if (index >= pokemonList.size - 1 && !endReached) {
                 viewModel.loadPokemonPaginated()
             }
-            PokedexRow(rowIndex = it, entries = pokemonList, navController = navController)
+            PokedexEntry(
+                entry = pokemonList[index],
+                navController = navController,
+                modifier = Modifier
+                    .padding(5.dp)
+            )
+        }
+    }
+
+    Box(
+        contentAlignment = Center,
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(color = MaterialTheme.colors.primary)
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+        if (loadError.isNotEmpty()) {
+            RetrySection(error = loadError) {
+                viewModel.loadPokemonPaginated()
+            }
         }
     }
 }
@@ -149,10 +183,6 @@ fun PokedexEntry(
     modifier: Modifier = Modifier,
     viewModel: PokemonListViewModel = hiltViewModel()
 ) {
-    val defaultDominantColor = MaterialTheme.colors.surface
-    var dominantColor by rememberSaveable {
-        mutableStateOf(ColorSaveable(defaultDominantColor))
-    }
     Box(
         contentAlignment = Center,
         modifier = modifier
@@ -163,14 +193,14 @@ fun PokedexEntry(
             .background(
                 brush = verticalGradient(
                     listOf(
-                        dominantColor.color,
-                        defaultDominantColor
+                        entry.color,
+                        MaterialTheme.colors.surface
                     )
                 )
             )
             .clickable {
                 navController.navigate(
-                    "pokemon_detail_screen/${dominantColor.color.toArgb()}/${entry.pokemonName}"
+                    "pokemon_detail_screen/${entry.color.toArgb()}/${entry.pokemonName}"
                 )
             }
     ) {
@@ -178,34 +208,28 @@ fun PokedexEntry(
             val painter = rememberImagePainter(
                 data = entry.imageUrl,
                 imageLoader = LocalImageLoader.current,
+                /*  imageLoader = ImageLoader.Builder(context = LocalContext.current)
+                       .memoryCachePolicy(CachePolicy.DISABLED)
+                       .diskCachePolicy(CachePolicy.DISABLED)
+                       .build(),*/
                 builder = {
-//                    crossfade(true)
-//                    crossfade(1000)
+                    crossfade(true)
                     transformations(
                         GetColorDominantTransformation {
-                            dominantColor = dominantColor.copy(color = it)
+                            viewModel.changeColor(it, entry.number)
                         }
                     )
                 }
             )
-            when (painter.state) {
-                is ImagePainter.State.Empty -> {
-                }
-                is ImagePainter.State.Loading -> {
-                    CircularProgressIndicator(
-                        strokeWidth = 10.dp,
-                        color = MaterialTheme.colors.primary,
-                        modifier = Modifier
-                            .scale(0.5f)
-                            .size(120.dp)
-                            .align(CenterHorizontally)
-                    )
-                }
-                is ImagePainter.State.Success -> {
-                    painter.imageLoader.bitmapPool
-                }
-                is ImagePainter.State.Error -> {
-                }
+            if (painter.state is ImagePainter.State.Loading) {
+                CircularProgressIndicator(
+                    strokeWidth = 10.dp,
+                    color = MaterialTheme.colors.primary,
+                    modifier = Modifier
+                        .scale(0.5f)
+                        .size(120.dp)
+                        .align(CenterHorizontally)
+                )
             }
             Image(
                 painter = painter,
@@ -252,4 +276,22 @@ fun PokedexRow(
         }
     }
     Spacer(modifier = Modifier.height(16.dp))
+}
+
+@Composable
+fun RetrySection(
+    error: String,
+    onRetry: () -> Unit
+) {
+    Column {
+        Text(text = error, color = Color.Red, fontSize = 18.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { onRetry() },
+            modifier = Modifier
+                .align(CenterHorizontally)
+        ) {
+            Text(text = "Retry")
+        }
+    }
 }

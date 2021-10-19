@@ -77,4 +77,10 @@ class PokemonListViewModel @Inject constructor(
             }
         }
     }*/
+
+    fun changeColor(color: Color, number: Int) {
+        pokemonList.value.find { it.number == number }?.let {
+            it.color = color
+        }
+    }
 }

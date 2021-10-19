@@ -1,4 +1,4 @@
-package com.plcoding.jetpackcomposepokedex
+package com.plcoding.jetpackcomposepokedex.util
 
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
