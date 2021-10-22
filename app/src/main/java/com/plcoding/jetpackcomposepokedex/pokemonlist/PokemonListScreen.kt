@@ -159,7 +159,9 @@ fun PokemonList(
     ) {
         items(pokemonList.size) { index ->
             if (index >= pokemonList.size - 1 && !endReached && !isLoading && !isSearching) {
-                viewModel.loadPokemonPaginated()
+                LaunchedEffect(key1 = true) {
+                    viewModel.loadPokemonPaginated()
+                }
             }
             PokedexEntry(
                 entry = pokemonList[index],
